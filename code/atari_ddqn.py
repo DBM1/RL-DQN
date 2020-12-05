@@ -12,6 +12,7 @@ from model import CnnDQN
 from trainer import Trainer
 import numpy as np
 
+
 class CnnDDQNAgent:
     def __init__(self, config: Config):
         self.config = config
@@ -22,6 +23,8 @@ class CnnDDQNAgent:
         self.target_model.load_state_dict(self.model.state_dict())
         self.model_optim = torch.optim.RMSprop(self.model.parameters(), lr=self.config.learning_rate,
                                                eps=1e-5, weight_decay=0.95, momentum=0, centered=True)
+        self.model_loss = torch.nn.MSELoss(reduction='sum')
+        self.discount = 0.8
 
         if self.config.use_cuda:
             self.cuda()
@@ -29,7 +32,7 @@ class CnnDDQNAgent:
     def act(self, state, epsilon=None):
         if epsilon is None: epsilon = self.config.epsilon_min
         if random.random() > epsilon or not self.is_training:
-            state = torch.tensor(state, dtype=torch.float)/255.0
+            state = torch.tensor(state, dtype=torch.float) / 255.0
             if self.config.use_cuda:
                 state = state.to(self.config.device)
             q_value = self.model.forward(state)
@@ -41,8 +44,8 @@ class CnnDDQNAgent:
     def learning(self, fr):
         s0, s1, a, r, done = self.buffer.sample(self.config.batch_size)
         if self.config.use_cuda:
-            s0 = s0.float().to(self.config.device)/255.0
-            s1 = s1.float().to(self.config.device)/255.0
+            s0 = s0.float().to(self.config.device) / 255.0
+            s1 = s1.float().to(self.config.device) / 255.0
             a = a.to(self.config.device)
             r = r.to(self.config.device)
             done = done.to(self.config.device)
@@ -50,14 +53,16 @@ class CnnDDQNAgent:
         # How to calculate Q(s,a) for all actions
         # q_values is a vector with size (batch_size, action_shape, 1)
         # each dimension i represents Q(s0,a_i)
-        q_values = self.model(s0).cuda()
+        all_q_values_present = self.model(s0).cuda()
+        all_q_values_future = self.model(s1).cuda()
 
         # How to calculate argmax_a Q(s,a)
-        actions = q_values.max(1)[1]
-
+        q_values_future_index = all_q_values_future.max(1)[1].unsqueeze(-1)
         # Tips: function torch.gather may be helpful
         # You need to design how to calculate the loss
-        loss = 0
+        q_values_present = torch.gather(all_q_values_present, 1, a)
+        q_values_future = torch.gather(all_q_values_future, 1, q_values_future_index)
+        loss = self.model_loss(r + self.discount * q_values_future, q_values_present)
 
         self.model_optim.zero_grad()
         loss.backward()
@@ -93,7 +98,7 @@ class CnnDDQNAgent:
         torch.save({
             'frames': fr,
             'model': self.model.state_dict()
-        }, '%s/checkpoint_fr_%d.tar'% (checkpath, fr))
+        }, '%s/checkpoint_fr_%d.tar' % (checkpath, fr))
 
     def load_checkpoint(self, model_path):
         checkpoint = torch.load(model_path)
@@ -141,7 +146,7 @@ if __name__ == '__main__':
     config.checkpoint_interval = 500000
     config.win_reward = 18
     config.win_break = True
-    config.device = torch.device("cuda: "+args.cuda_id if args.cuda else "cpu")
+    config.device = torch.device("cuda:" + args.cuda_id if args.cuda else "cpu")
     # handle the atari env
     env = make_atari(config.env)
     env = wrap_deepmind(env)

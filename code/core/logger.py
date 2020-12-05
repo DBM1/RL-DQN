@@ -21,6 +21,7 @@ class TensorBoardLogger(object):
 
 	def __init__(self, log_dir):
 		"""Create a summary writer logging to log_dir."""
+		tf.compat.v1.disable_eager_execution()
 		self.writer = tf.compat.v1.summary.FileWriter(log_dir)
 
 	def scalar_summary(self, tag, step, value):
