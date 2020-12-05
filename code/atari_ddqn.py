@@ -21,10 +21,10 @@ class CnnDDQNAgent:
         self.model = CnnDQN(self.config.state_shape, self.config.action_dim)
         self.target_model = CnnDQN(self.config.state_shape, self.config.action_dim)
         self.target_model.load_state_dict(self.model.state_dict())
-        self.model_optim = torch.optim.RMSprop(self.model.parameters(), lr=self.config.learning_rate,
-                                               eps=1e-5, weight_decay=0.95, momentum=0, centered=True)
+        # self.model_optim = torch.optim.RMSprop(self.model.parameters(), lr=self.config.learning_rate,
+        #                                        eps=1e-5, weight_decay=0.95, momentum=0, centered=True)
+        self.model_optim = Adam(self.model.parameters(), lr=self.config.learning_rate)
         self.model_loss = torch.nn.MSELoss(reduction='sum')
-        self.discount = 0.8
 
         if self.config.use_cuda:
             self.cuda()
@@ -62,7 +62,7 @@ class CnnDDQNAgent:
         # You need to design how to calculate the loss
         q_values_present = torch.gather(all_q_values_present, 1, a)
         q_values_future = torch.gather(all_q_values_future, 1, q_values_future_index)
-        loss = self.model_loss(r + self.discount * q_values_future, q_values_present)
+        loss = self.model_loss(q_values_present, r + (config.gamma * q_values_future))
 
         self.model_optim.zero_grad()
         loss.backward()

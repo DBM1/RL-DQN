@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+
 class DQN(nn.Module):
     def __init__(self, num_inputs, actions_dim):
         super(DQN, self).__init__()
@@ -16,6 +17,7 @@ class DQN(nn.Module):
     def forward(self, x):
         return self.nn(x)
 
+
 class CnnDQN(nn.Module):
     def __init__(self, inputs_shape, num_actions):
         super(CnnDQN, self).__init__()
@@ -26,15 +28,19 @@ class CnnDQN(nn.Module):
         self.features = nn.Sequential(
             nn.Conv2d(inputs_shape[0], 32, kernel_size=8, stride=4),
             nn.LeakyReLU(),
+            nn.LayerNorm([20, 20]),
             nn.Conv2d(32, 64, kernel_size=4, stride=2),
             nn.LeakyReLU(),
+            nn.LayerNorm([9, 9]),
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.LeakyReLU()
+            nn.LeakyReLU(),
+            nn.LayerNorm([7, 7]),
         )
 
         self.fc = nn.Sequential(
             nn.Linear(self.features_size(), 512),
             nn.LeakyReLU(),
+            nn.LayerNorm(512),
             nn.Linear(512, self.num_actions)
         )
 
