@@ -34,13 +34,12 @@ class CnnDQN(nn.Module):
             nn.LayerNorm([9, 9]),
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
             nn.LeakyReLU(),
-            nn.LayerNorm([7, 7]),
+            nn.LayerNorm([7, 7])
         )
 
         self.fc = nn.Sequential(
             nn.Linear(self.features_size(), 512),
             nn.LeakyReLU(),
-            nn.LayerNorm(512),
             nn.Linear(512, self.num_actions)
         )
 

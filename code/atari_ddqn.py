@@ -28,6 +28,7 @@ class CnnDDQNAgent:
 
         if self.config.use_cuda:
             self.cuda()
+            self.model_loss = self.model_loss.cuda()
 
     def act(self, state, epsilon=None):
         if epsilon is None: epsilon = self.config.epsilon_min
@@ -54,15 +55,15 @@ class CnnDDQNAgent:
         # q_values is a vector with size (batch_size, action_shape, 1)
         # each dimension i represents Q(s0,a_i)
         all_q_values_present = self.model(s0).cuda()
-        all_q_values_future = self.model(s1).cuda()
+        all_q_values_future = self.target_model(s1).cuda()
 
         # How to calculate argmax_a Q(s,a)
-        q_values_future_index = all_q_values_future.max(1)[1].unsqueeze(-1)
+        q_values_future = all_q_values_future.max(1)[0].unsqueeze(-1)
+        target = (config.gamma * (1 - done) * q_values_future) + r
         # Tips: function torch.gather may be helpful
         # You need to design how to calculate the loss
-        q_values_present = torch.gather(all_q_values_present, 1, a)
-        q_values_future = torch.gather(all_q_values_future, 1, q_values_future_index)
-        loss = self.model_loss(q_values_present, r + (config.gamma * q_values_future))
+        q_values_present = all_q_values_present.gather(1, a)
+        loss = self.model_loss(q_values_present, target.detach())
 
         self.model_optim.zero_grad()
         loss.backward()
