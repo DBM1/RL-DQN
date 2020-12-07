@@ -19,7 +19,7 @@ class RolloutStorage(object):
         self.current_size = 0
 
         self.config = config
-        self.scale = 5
+        self.scale = 10
 
     def add(self, obs, actions, rewards, next_obs, masks):
         self.obs[self.step].copy_(torch.tensor(obs[None, :], dtype=torch.uint8).squeeze(0).squeeze(0))
@@ -62,7 +62,7 @@ class RolloutStorage(object):
             q_values_model = all_q_values_model.gather(1, a)
             abs_td_error = torch.abs(target - q_values_model).cpu().squeeze().detach().numpy()
             top_indices = np.argpartition(abs_td_error, -mini_batch_size)[-mini_batch_size:]
-            indices = top_indices
+            indices = indices[top_indices]
         obs_batch = self.obs[indices]
         obs_next_batch = self.next_obs[indices]
         actions_batch = self.actions[indices]

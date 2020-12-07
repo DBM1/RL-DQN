@@ -61,7 +61,7 @@ class RolloutStorage(object):
             q_values_model = all_q_values_model.gather(1, a)
             abs_td_error = torch.abs(target - q_values_model).cpu().squeeze().detach().numpy()
             top_indices = np.argpartition(abs_td_error, -mini_batch_size)[-mini_batch_size:]
-            indices = top_indices
+            indices = indices[top_indices]
         obs_batch = self.obs[indices]
         obs_next_batch = self.next_obs[indices]
         actions_batch = self.actions[indices]
