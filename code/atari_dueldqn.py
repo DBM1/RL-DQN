@@ -8,7 +8,7 @@ from buffer import RolloutStorage
 from common.wrappers import make_atari, wrap_deepmind, wrap_pytorch
 from config import Config
 from core.util import get_class_attr_val
-from model import CnnDQN
+from dueling_model import CnnDuelDQN
 from trainer import Trainer
 import numpy as np
 
@@ -18,8 +18,8 @@ class CnnDQNAgent:
         self.config = config
         self.is_training = True
         self.buffer = RolloutStorage(config)
-        self.model = CnnDQN(self.config.state_shape, self.config.action_dim)
-        self.target_model = CnnDQN(self.config.state_shape, self.config.action_dim)
+        self.model = CnnDuelDQN(self.config.state_shape, self.config.action_dim)
+        self.target_model = CnnDuelDQN(self.config.state_shape, self.config.action_dim)
         self.target_model.load_state_dict(self.model.state_dict())
         # self.model_optim = torch.optim.RMSprop(self.model.parameters(), lr=self.config.learning_rate,
         #                                        eps=1e-5, weight_decay=0.95, momentum=0, centered=True)
