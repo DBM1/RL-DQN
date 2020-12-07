@@ -43,29 +43,8 @@ class CnnPRBDQNAgent:
         return action
 
     def learning(self, fr):
-        obs_batch = self.buffer.obs
-        obs_next_batch = self.buffer.next_obs
-        actions_batch = self.buffer.actions
-        rewards_batch = self.buffer.rewards
-        masks_batch = self.buffer.masks
-        if self.config.use_cuda:
-            s0 = obs_batch.float().to(self.config.device) / 255.0
-            s1 = obs_next_batch.float().to(self.config.device) / 255.0
-            a = actions_batch.to(self.config.device)
-            r = rewards_batch.to(self.config.device)
-            done = masks_batch.to(self.config.device)
-        all_q_values_model = self.model(s0).cuda()
-        all_q_values_target = self.target_model(s1).cuda()
-
-        # How to calculate argmax_a Q(s,a)
-        q_values_target = all_q_values_target.max(1)[0].unsqueeze(-1)
-        target = (config.gamma * (1 - done) * q_values_target) + r
-        # Tips: function torch.gather may be helpful
-        # You need to design how to calculate the loss
-        q_values_model = all_q_values_model.gather(1, a)
-        abs_td_error = torch.abs(target - q_values_model).squeeze(-1)
-
-        s0, s1, a, r, done = self.buffer.sample(self.config.batch_size, abs_td_error)
+        s0, s1, a, r, done = self.buffer.sample(self.config.batch_size, model=self.model,
+                                                target_model=self.target_model)
         if self.config.use_cuda:
             s0 = s0.float().to(self.config.device) / 255.0
             s1 = s1.float().to(self.config.device) / 255.0
