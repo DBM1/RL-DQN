@@ -4,22 +4,22 @@ import random
 import torch
 from torch.optim import Adam
 from tester import Tester
-from buffer import RolloutStorage
+from prioritized_replay_buffer import RolloutStorage
 from common.wrappers import make_atari, wrap_deepmind, wrap_pytorch
 from config import Config
 from core.util import get_class_attr_val
-from dueling_model import CnnDuelDQN
+from model import CnnDQN
 from trainer import Trainer
 import numpy as np
 
 
-class CnnDuelDQNAgent:
+class CnnPRBDQNAgent:
     def __init__(self, config: Config):
         self.config = config
         self.is_training = True
         self.buffer = RolloutStorage(config)
-        self.model = CnnDuelDQN(self.config.state_shape, self.config.action_dim)
-        self.target_model = CnnDuelDQN(self.config.state_shape, self.config.action_dim)
+        self.model = CnnDQN(self.config.state_shape, self.config.action_dim)
+        self.target_model = CnnDQN(self.config.state_shape, self.config.action_dim)
         self.target_model.load_state_dict(self.model.state_dict())
         # self.model_optim = torch.optim.RMSprop(self.model.parameters(), lr=self.config.learning_rate,
         #                                        eps=1e-5, weight_decay=0.95, momentum=0, centered=True)
@@ -43,7 +43,29 @@ class CnnDuelDQNAgent:
         return action
 
     def learning(self, fr):
-        s0, s1, a, r, done = self.buffer.sample(self.config.batch_size)
+        obs_batch = self.buffer.obs
+        obs_next_batch = self.buffer.next_obs
+        actions_batch = self.buffer.actions
+        rewards_batch = self.buffer.rewards
+        masks_batch = self.buffer.masks
+        if self.config.use_cuda:
+            s0 = obs_batch.float().to(self.config.device) / 255.0
+            s1 = obs_next_batch.float().to(self.config.device) / 255.0
+            a = actions_batch.to(self.config.device)
+            r = rewards_batch.to(self.config.device)
+            done = masks_batch.to(self.config.device)
+        all_q_values_model = self.model(s0).cuda()
+        all_q_values_target = self.target_model(s1).cuda()
+
+        # How to calculate argmax_a Q(s,a)
+        q_values_target = all_q_values_target.max(1)[0].unsqueeze(-1)
+        target = (config.gamma * (1 - done) * q_values_target) + r
+        # Tips: function torch.gather may be helpful
+        # You need to design how to calculate the loss
+        q_values_model = all_q_values_model.gather(1, a)
+        abs_td_error = torch.abs(target - q_values_model).squeeze(-1)
+
+        s0, s1, a, r, done = self.buffer.sample(self.config.batch_size, abs_td_error)
         if self.config.use_cuda:
             s0 = s0.float().to(self.config.device) / 255.0
             s1 = s1.float().to(self.config.device) / 255.0
@@ -156,7 +178,7 @@ if __name__ == '__main__':
     config.action_dim = env.action_space.n
     config.state_shape = env.observation_space.shape
     print(config.action_dim, config.state_shape)
-    agent = CnnDuelDQNAgent(config)
+    agent = CnnPRBDQNAgent(config)
 
     if args.train:
         trainer = Trainer(agent, env, config)
