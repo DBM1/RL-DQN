@@ -37,11 +37,11 @@
 \maketitle
 
 \section{作业内容}
-我们需要在gym Atari环境中实现DQN算法及其变体。本实验的实验环境是Atari Game Pong，Agent需要操控球拍与系统互相击球，未接到球则对方计一分，先取得21分者获胜。实验目标是训练DQN及其变体作为Agent获得游戏胜利，并使获胜时的分差尽可能大。在本次实验中，我分别实现和训练了DQN、Double DQN以及Dueling DQN，并评估了它们在训练过程中的表现和它们在上述游戏中的性能。同时我也实现了Prioritized Replay Buffer，但是完整的算法受限于我的硬件性能无法运行，因此我对论文中的算法进行了一定的简化，并且评估了简化后的算法对DQN训练过程的影响。
+我们需要在gym Atari环境中实现DQN算法及其变体。本实验的实验环境是Atari Game Pong，Agent需要操控球拍与系统互相击球，未接到球则对方计一分，先取得21分者获胜。实验目标是训练DQN及其变体作为Agent获得游戏胜利，并使获胜时的分差尽可能大。在本次实验中，我分别实现和训练了DQN\cite{ref1}、Double DQN\cite{ref2}以及Dueling DQN\cite{ref3}，并评估了它们在训练过程中的表现和它们在上述游戏中的性能。同时我也实现了Prioritized Replay Buffer\cite{ref4}，但是完整的算法受限于我的硬件性能无法运行，因此我对论文中的算法进行了一定的简化，并且评估了简化后的算法对DQN训练过程的影响。
 
 \section{实现过程}
 \subsection{算法描述}
-\paragraph{Q-learning} 在传统Q-learning算法中，我们使用一张 $Q$ 表来记录环境状态 $s$ 以及该状态对应各个动作 $a$ 的长期回报值 $Q(s,a)$，并使用下式来更新 $Q$ 表：
+\paragraph{Q-learning\cite{ref5}} 在传统Q-learning算法中，我们使用一张 $Q$ 表来记录环境状态 $s$ 以及该状态对应各个动作 $a$ 的长期回报值 $Q(s,a)$，并使用下式来更新 $Q$ 表：
 $$
 \begin{cases}
 	&a'= \mathop{\arg\max}_{x} Q(s',x)\\
@@ -67,20 +67,26 @@ $$
 复现DQN:在主文件夹下运行 \texttt{python atari\_ddqn.py --train}.
 \subsection{测试复现}
 \subsection{参数介绍}
-\noindent复现其他变体:
+\noindent 复现其他变体:
 \section{实验效果}
 \subsection{实验图表展示与分析}
 描述累计奖励和样本训练量之间的关系。
 
 \noindent DQN:
 
-\noindent其他变体：
+\noindent 其他变体：
 
 \section{小结}
 在这次实验中，我发现...
 
-
-\section{参考文献}
-
+\newpage
+\renewcommand\refname{参考文献}
+\begin{thebibliography}{99}
+	\bibitem{ref1}Mnih V, Kavukcuoglu K, Silver D, et al. Playing atari with deep reinforcement learning[J]. arXiv preprint arXiv:1312.5602, 2013.
+	\bibitem{ref2}Van Hasselt H, Guez A, Silver D. Deep reinforcement learning with double q-learning[J]. arXiv preprint arXiv:1509.06461, 2015.
+	\bibitem{ref3}Wang Z, Schaul T, Hessel M, et al. Dueling network architectures for deep reinforcement learning[C]//International conference on machine learning. PMLR, 2016: 1995-2003.
+	\bibitem{ref4}Schaul T, Quan J, Antonoglou I, et al. Prioritized experience replay[J]. arXiv preprint arXiv:1511.05952, 2015.
+	\bibitem{ref5}Watkins C J C H, Dayan P. Q-learning[J]. Machine learning, 1992, 8(3-4): 279-292.
+\end{thebibliography}
 \end{CJK}
 \end{document}

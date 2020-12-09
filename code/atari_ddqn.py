@@ -58,7 +58,8 @@ class CnnDDQNAgent:
         all_q_values_target = self.target_model(s1).cuda()
 
         # How to calculate argmax_a Q(s,a)
-        q_values_target_index = all_q_values_model.max(1)[1].unsqueeze(-1)
+        next_all_q_values_model = self.model(s1).cuda()
+        q_values_target_index = next_all_q_values_model.max(1)[1].unsqueeze(-1)
         q_values_target = all_q_values_target.gather(1, q_values_target_index)
         target = (config.gamma * (1 - done) * q_values_target) + r
         # Tips: function torch.gather may be helpful

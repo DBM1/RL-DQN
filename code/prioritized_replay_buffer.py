@@ -19,7 +19,7 @@ class RolloutStorage(object):
         self.current_size = 0
 
         self.config = config
-        self.scale = 10
+        self.scale = 5
 
     def add(self, obs, actions, rewards, next_obs, masks):
         self.obs[self.step].copy_(torch.tensor(obs[None, :], dtype=torch.uint8).squeeze(0).squeeze(0))

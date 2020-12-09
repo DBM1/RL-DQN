@@ -19,7 +19,7 @@ class RolloutStorage(object):
         self.current_size = 0
 
         self.config = config
-        self.scale = 10
+        self.scale = 5
 
     def add(self, obs, actions, rewards, next_obs, masks):
         self.obs[self.step].copy_(torch.tensor(obs[None, :], dtype=torch.uint8).squeeze(0).squeeze(0))
@@ -54,7 +54,8 @@ class RolloutStorage(object):
             all_q_values_target = target_model(s1).cuda()
 
             # How to calculate argmax_a Q(s,a)
-            q_values_target_index = all_q_values_model.max(1)[1].unsqueeze(-1)
+            next_all_q_values_model = model(s1).cuda()
+            q_values_target_index = next_all_q_values_model.max(1)[1].unsqueeze(-1)
             q_values_target = all_q_values_target.gather(1, q_values_target_index)
             target = (self.config.gamma * (1 - done) * q_values_target) + r
             # Tips: function torch.gather may be helpful
