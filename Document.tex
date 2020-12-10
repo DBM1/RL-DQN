@@ -30,9 +30,9 @@
 
 \title{强化学习：作业三}
 
-\author{张三 MG20370001}
+\author{傅浩敏 MG20370012}
 
-\date{2020年11月2日}
+\date{2020年12月9日}
 
 \maketitle
 
@@ -58,27 +58,130 @@ $$
 \|r+\gamma Q'(s',\mathop{\arg\max}_{x} Q'(s',x))-Q(s,a)\|_2^2
 $$
 其中 $Q$ 为原网络输出， $Q'$ 为目标网络输出。在经过一段时间的训练后，我们需要将原网络参数复制到目标网络上。
-\paragraph{Double DQN} 该变体是对DQN中训练目标的优化。
-\paragraph{Dueling DQN} 该变体是对DQN中网络结构的优化。
-\paragraph{Prioritized Replay Buffer} 优化了Replay Buffer中的采样方式，通过增大TD error较大的样本的采样概率和损失函数权重来提高训练速度。
+\paragraph{Double DQN} 该变体是对DQN中训练目标的优化。在Q-learning算法中，采用 $\arg\max$ 选择动作会导致对 $Q$ 值的估计有一定程度的偏高\cite{ref2}。Double DQN通过解耦动作选择和 $Q$ 值估计来减少偏差值。即在当前网络上对状态 $s'$ 通过 $\arg\max$ 选择动作 $a'$ ，而在目标网络上计算 $s',\ a'$ 对应的 $Q$ 值。因此可将损失函数改写为：
+$$
+\|r+\gamma Q'(s',\mathop{\arg\max}_{x} Q(s',x))-Q(s,a)\|_2^2
+$$
+通过这种方式，可以缓解估计值偏高的问题。
+\paragraph{Dueling DQN} 该变体是对DQN中网络结构的优化。在原始DQN中，神经网络模型直接输出了各个动作对应的 $Q$ 值；而在Dueling DQN中，模型的输出会由Value Function和Advantage Function两个子网络的输出相加获得。其中Value Function仅输出对应状态的 $Q$ 值，而Advantage Function则会输出对应状态各个动作对 $Q$ 值的“增益”。通过这种方式可以使网络更加精确地估计 $Q$ 值。
+\begin{figure}[h!]
+\centering
+\includegraphics[width=8cm,height=4cm]{./resource/dueling_architecture.png}
+\caption{Dueling DQN 网络结构\cite{ref3}}
+\end{figure}
+\newpage
 \subsection{代码实现}
+\noindent DQN学习过程伪代码如下：
+\begin{algorithm}[!h]
+	\caption{DQN learning function}
+	\begin{algorithmic}[1]
+		\STATE \textbf{Input:} current step $step$,update interval $update$, minibatch $k$, discount rate $\gamma$, sample buffer $buffer$, model $\pi$, target model $\pi'$.
+		\STATE Sample state, next state, action, reward and done mask from buffer \\$s0, s1, a, r, done =buffer.sample(k)$
+		\STATE Calculate models' outputs $modelOutputs=\pi(s0)$, $targetModelOutputs=\pi'(s1)$
+		\STATE Find max value in actions $targetMax$=max($targetModelOutputs$)
+		\STATE Calculate target $target$=$r + \gamma*(1-done)*targetMax$
+		\STATE Find value of the actions $presentValue=modelOutputs[a]$
+		\STATE Calculate MSE loss $loss=\|presentValue-target\|_2^2$
+		\STATE Update parameters $\pi.update()$
+		\IF{$fr$ mod $update$ == 0}
+		\STATE Update target model $\pi'=\pi$
+		\ENDIF
+	\end{algorithmic}
+\end{algorithm}
+\\
+\noindent Double DQN只在Algorithm 1的基础上优化了动作选择的过程：
+\begin{algorithm}[!h]
+	\caption{Double DQN learning function}
+	\begin{algorithmic}[1]
+		\STATE \textbf{Input:} current step $step$,update interval $update$, minibatch $k$, discount rate $\gamma$, sample buffer $buffer$, model $\pi$, target model $\pi'$, loss function $mseLoss$.
+		\STATE Sample state, next state, action, reward and done mask from buffer \\$s0, s1, a, r, done =buffer.sample(k)$
+		\STATE Calculate models' outputs $modelOutputsS0=\pi(s0)$, $modelOutputsS1=\pi(s1)$, $targetModelOutputs=\pi'(s1)$
+		\STATE Find actions of max value $maxActions$=$\arg\max_a (targetModelOutputsS1)$
+		\STATE Find target values $targetMax=targetModelOutputs[maxActions]$
+		\STATE Calculate target $target$=$r + \gamma*(1-done)*targetMax$
+		\STATE Find value of the actions $presentValue=modelOutputsS0[a]$
+		\STATE Calculate MSE loss $loss=\|presentValue-target\|_2^2$
+		\STATE Update parameters $\pi.update()$
+		\IF{$fr$ mod $update$ == 0}
+		\STATE Update target model $\pi'=\pi$
+		\ENDIF
+	\end{algorithmic}
+\end{algorithm}
+\newpage
+\noindent Dueling DQN则是修改了网络结构:
+\begin{algorithm}[!h]
+	\caption{Dueling DQN network}
+	\begin{algorithmic}[1]
+		\STATE \textbf{Input:} observation $image$, CNN sub-network $cnn$, full connection layer  $fc$, value network $valueNet$, advantage network $advNet$
+		\STATE \textbf{Output:} Q value vector for each actions $value$
+		\STATE Calculate image features $features=cnn(image)$
+		\STATE Calculate hidden layer $hiddenLayer=fc(features)$
+		\STATE Calculate value $value=valueNet(hiddenLayer)+advNet(hiddenLayer)$
+		\RETURN $value$
+	\end{algorithmic}
+\end{algorithm}
 \section{复现方式}
 \subsection{训练复现}
-复现DQN:在主文件夹下运行 \texttt{python atari\_ddqn.py --train}.
+\noindent 首先在主文件夹下运行 \texttt{pip install -r requirements.txt} 安装依赖，如果已安装依赖也可跳过此步骤。\texttt{code} 文件夹中包含的三个python文件 \texttt{atari\_dqn.py，atari\_ddqn.py，atari\_dueldqn.py} 分别对应了 DQN、Double DQN和Dueling DQN，在 \texttt{code} 文件夹下运行 \texttt{python xxx.py --train} 可复现对应的训练过程。比如想复现DQN的训练过程则可在 \texttt{code} 文件夹下运行 \texttt{python atari\_dqn.py --train}。
 \subsection{测试复现}
+\noindent 依然可以在主文件夹下运行 \texttt{pip install -r requirements.txt} 安装依赖，如果已安装依赖也可跳过此步骤。\texttt{code/model} 文件夹下存放了训练好的模型参数，其中Dueling DQN成功达到了预定的训练目标。在 \texttt{code} 文件夹下运行 \texttt{python atari\_dqn.py --test --model\_path=\\model/dqn/model\_last.pkl} 可以复现DQN的测试结果；运行 \texttt{python atari\_ddqn.py --test --model\_path=model/ddqn/model\_last.pkl} 可以复现Double DQN的测试结果；运行 \texttt{python atari\_dueldqn.py --test --model\_path=model/dueldqn/model\_best.pkl} 可以复现\\Dueling DQN的测试结果。
 \subsection{参数介绍}
-\noindent 复现其他变体:
+为了更好地对比不同算法的实验效果，对于DQN、Double DQN和Dueling DQN我使用了完全相同的超参数设置。同时，DQN和Double DQN使用了相同的网络结构，而Dueling DQN仅在模型最后的全连接层有所改动。
+\newpage 
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=10cm,height=8.8cm]{./resource/model.png}
+	\caption{DQN和Double DQN网络参数}
+\end{figure}
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=10cm,height=8.8cm]{./resource/dueling_model.png}
+	\caption{Dueling DQN网络参数}
+\end{figure}
+\newpage
+\noindent Figure 2和Figure 3分别展示了DQN和Dueling DQN的两种网络参数。在原有卷积神经网络的基础上，我穿插了一些归一化层以提升网络收敛速度，我使用了均方差损失并且改用Adam优化器对网络参数进行优化。
+\begin{table}[!h]
+	\renewcommand{\arraystretch}{1.1}
+	\caption{关键超参数}
+	\centering
+	\begin{tabular}{ccc}
+		\hline
+		名称& 默认值& 说明\\
+		\hline
+		learning\_rate& 1e-5 & 学习率 $\alpha$\\
+		gamma& 0.99 & 折扣系数 $\gamma$\\
+		frames& 2000000 & 训练总帧数\\
+		update\_tar\_interval& 1000 & 目标网络参数更新周期 \\
+		batch\_size& 32 & minibatch帧大小\\
+		max\_buff& 100000 & 最大帧缓存容量 \\
+		win\_reward& 18 & 目标平均奖励 \\
+		\hline
+	\end{tabular}
+\end{table}
 \section{实验效果}
 \subsection{实验图表展示与分析}
-描述累计奖励和样本训练量之间的关系。
-
-\noindent DQN:
-
-\noindent 其他变体：
+DQN、Double DQN和Dueling DQN的累计奖励和样本训练量之间关系如下。也可以在 \texttt{code} 文件夹下运行 
+\texttt{tensorboard --logdir ./model} 并在浏览器中打开链接查看详细的训练过程。\\
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=14cm,height=3cm]{./resource/Best 100-episodes average reward.png}
+	\caption{最优平均奖励}
+\end{figure}
+\newpage
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=14cm,height=5cm]{./resource/Loss per frame.png}
+	\caption{每帧损失}
+\end{figure}
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=14cm,height=3cm]{./resource/Reward per episode.png}
+	\caption{平均奖励}
+\end{figure}
 
 \section{小结}
-在这次实验中，我发现...
-
+\subsection{关于算法本身}
+\subsection{关于实验过程}
 \newpage
 \renewcommand\refname{参考文献}
 \begin{thebibliography}{99}
